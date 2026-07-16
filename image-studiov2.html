@@ -54,8 +54,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .rail.right{border-left:1px solid var(--hair)}
 
 .brandline{font-family:var(--fd);font-size:1.02rem;font-weight:800;letter-spacing:-.03em;
-  display:flex;align-items:center;gap:7px}
-.brandline svg{width:56px;height:8px;fill:var(--coral);flex:none}
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.brandline svg{width:56px;height:8px;fill:var(--coral);flex:none;margin-left:1px}
 .subline{color:var(--dim);font-size:10px;letter-spacing:.07em;text-transform:uppercase;margin:2px 0 12px}
 
 /* ---------- collapsible groups ---------- */
@@ -341,7 +341,7 @@ input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;bac
   /* TOP — collapsible document toolbar */
   .mobtop{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--paper);
     border-bottom:1px solid var(--hair);flex:none;z-index:20}
-  .mobtop .brandline{font-size:.9rem;flex:1;min-width:0}
+  .mobtop .brandline{flex-direction:row;align-items:center;font-size:.9rem;flex:1;min-width:0}
   .mobtop .brandline svg{display:none}
   .mobtop button{border:1px solid var(--hair);background:var(--tile);border-radius:8px;padding:6px 9px;
     font-size:11px;font-weight:600;color:var(--soft);cursor:pointer;flex:none}
@@ -359,14 +359,25 @@ input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;bac
   .stagetop{display:none}
   .viewport{touch-action:none}
   .bar{display:none}
-  .zoombar{right:8px;bottom:calc(var(--sheet,164px) + 8px)}
+  /* was bottom:right, which ended up hovering over the middle of the artwork
+     on short/square canvases. Anchoring to the top-right, clear of the
+     sheet below and the mobtop bar above, keeps it off the working area. */
+  .zoombar{top:8px;right:8px;bottom:auto;flex-wrap:wrap;max-width:min(78vw,320px)}
   .status{display:none}
 
   /* BOTTOM — object properties sheet */
   .rail.right{position:relative;border-left:0;border-top:1px solid var(--hair);flex:none;
-    height:var(--sheet,164px);padding:0 12px 12px;transition:height .22s cubic-bezier(.22,1,.36,1);
+    height:var(--sheet,74px);padding:0 12px 12px;transition:height .22s cubic-bezier(.22,1,.36,1);
     overscroll-behavior:contain}
   .rail.right.tall{height:62dvh}
+  /* Collapsed = only the grab handle + tab bar are visible. The old fixed
+     164px collapsed height left the top of the Layers/Properties/Add body
+     peeking out underneath, clipped mid-row, which read as a stuck-open
+     panel rather than a closed one. Hiding the body outright when not
+     "tall" fixes that regardless of how much content it holds. */
+  .rail.right:not(.tall) > #paneLayers,
+  .rail.right:not(.tall) > #paneAdd,
+  .rail.right:not(.tall) > #inspector{display:none}
   .mobsheet-grab{display:block;position:sticky;top:0;background:var(--paper);padding:7px 0 5px;z-index:5;
     cursor:grab;border:0;width:100%}
   .mobsheet-grab::before{content:"";display:block;width:34px;height:4px;border-radius:4px;
@@ -4458,6 +4469,14 @@ scroller.addEventListener("pointerdown",e=>{
     push();
     drag={mode:"move",last:[px,py],moved:false,snapLines:[],box:selectionBBox(),acc:[0,0]};
     schedule(); return;
+  }
+  /* on touch, empty space with one finger pans instead of marquee-selecting.
+     (The Pan-tool button lives in .stagetop, hidden at mobile widths, and
+     there's no Space key on a phone/tablet, so this branch was previously
+     unreachable there and swipe-to-pan simply didn't work.) */
+  if(e.pointerType==="touch"){
+    drag={mode:"pan",sx:e.clientX,sy:e.clientY,ox:S.view.x,oy:S.view.y};
+    vp.classList.add("panning"); return;
   }
   /* marquee */
   if(!e.shiftKey) setSel([]);
